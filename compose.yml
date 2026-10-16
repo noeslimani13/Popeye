@@ -1,11 +1,14 @@
 services:
   poll:
     build: ./poll
+    env_file: .env
     ports:
       - "5000:80"
     networks:
       - poll-tier
       - back-tier
+    depends_on:
+      - redis
     restart: unless-stopped
 
   redis:
@@ -18,29 +21,34 @@ services:
 
   worker:
     build: ./worker
+    env_file: .env
     networks:
       - back-tier
+    depends_on:
+      - redis
+      - db
     restart: unless-stopped
 
   db:
     image: postgres:15
+    env_file: .env
     volumes:
       - db-data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: poll_db
-      POSTGRES_USER: poll_user
-      POSTGRES_PASSWORD: poll_password
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     networks:
       - back-tier
     restart: unless-stopped
 
   result:
     build: ./result
+    env_file: .env
     ports:
       - "5001:80"
     networks:
       - result-tier
       - back-tier
+    depends_on:
+      - db
     restart: unless-stopped
 
 networks:
